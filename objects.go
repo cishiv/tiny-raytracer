@@ -4,6 +4,8 @@ import (
 	"math"
 )
 
+// Author: https://github.com/cishiv
+
 // COLOR
 var bgColor = NewVec3(0.2, 0.7, 0.8)
 var objectColor = NewVec3(0.4, 0.4, 0.3)

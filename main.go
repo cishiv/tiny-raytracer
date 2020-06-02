@@ -9,6 +9,8 @@ import (
 	"os"
 )
 
+// Author: https://github.com/cishiv
+
 // Inspired by https://github.com/ssloy/tinyraytracer
 // https://github.com/huqa/tinyraytracer-go/blob/54817bbe85026965ad4d0725a1375705f82d8e09/internal/app/tinyraytracer-go/render.go#L110
 // https://github.com/ssloy/tinyraytracer/blob/bd36c9857305b3cbd06f5b768bb48a92df9ae68b/geometry.h
@@ -16,6 +18,8 @@ import (
 
 // Camera view angle
 const fieldOfView = math.Pi / 3.0
+
+// 'Window' dimensions (image dimensions since we're writing directly to file)
 const width = 1024
 const height = 768
 
