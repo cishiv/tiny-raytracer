@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -66,7 +65,7 @@ func CastRay(origin, direction *Vec3, spheres []Sphere) Vec3 {
 	if !intersect {
 		return bgColor
 	}
-	return objectColor
+	return mat.diffuseColor
 }
 
 // RayIntersect : http://www.lighthouse3d.com/tutorials/maths/ray-sphere-intersection/ (Check if a given ray intersects with a sphere)
@@ -108,6 +107,5 @@ func (s Sphere) RayIntersect(origin, direction Vec3, t float64) (float64, bool) 
 		return t, false
 	}
 
-	fmt.Println("interesection")
 	return t, true
 }

@@ -34,6 +34,7 @@ func render(spheres []Sphere) {
 			// Big math (TODO: Figure this out)
 			x := (float64(i) + 0.5) - width/2.0
 			y := -(float64(j) + 0.5) + height/2.0
+			// TODO: We're not 3D yet
 			z := -float64(height) / (2.0 * math.Tan(fieldOfView/2.0))
 			direction := NewVec3(x, y, z).Normalize()
 			framebuffer[i+j*width] = CastRay(&origin, &direction, spheres)
@@ -76,8 +77,8 @@ func main() {
 func createSpheres() []Sphere {
 	spheres := make([]Sphere, 0)
 	spheres = append(spheres, NewSphere(-3, 0, -16, 5, ivory))
-	spheres = append(spheres, NewSphere(-3.0, -1.5, -12, 2, redRubber))
-	spheres = append(spheres, NewSphere(3, -0.5, -18, 3, redRubber))
+	spheres = append(spheres, NewSphere(-1.0, -1.5, -12, 2, redRubber))
+	spheres = append(spheres, NewSphere(1.5, -0.5, -18, 3, redRubber))
 	spheres = append(spheres, NewSphere(7, 5, -18, 4, ivory))
 	fmt.Println(spheres)
 	return spheres
