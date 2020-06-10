@@ -11,3 +11,5 @@ Inspired by https://github.com/ssloy/tinyraytracer
 - triangles
 - fix refraction
 - simplify / minify / concurrency
+- fix directory structure
+- split the struct code and rendering code
