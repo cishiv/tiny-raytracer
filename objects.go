@@ -22,6 +22,20 @@ type Material struct {
 	diffuseColor Vec3
 }
 
+// Light : some basic lighting
+type Light struct {
+	position  Vec3
+	intensity float64
+}
+
+// NewLight : Return a new light source from pos(x,y,z) with a particular intensity
+func NewLight(x, y, z, intensity float64) Light {
+	return Light{
+		NewVec3(x, y, z),
+		intensity,
+	}
+}
+
 // NewMaterial : Return a new vec3 representing the diffuse_colour for a material
 func NewMaterial(x, y, z float64) Material {
 	return Material{
@@ -58,16 +72,22 @@ func SceneIntersect(origin, direction, hit, N *Vec3, mat *Material, spheres []Sp
 }
 
 // CastRay : Cast a ray toward all spheres in a scene, with a given origin of light and a direction, return the resulting 'reflection'(?)
-func CastRay(origin, direction *Vec3, spheres []Sphere) Vec3 {
+func CastRay(origin, direction *Vec3, spheres []Sphere, lights []Light) Vec3 {
 	point := &Vec3{}
 	N := &Vec3{}
 	mat := &Material{}
 
 	intersect := SceneIntersect(origin, direction, point, N, mat, spheres)
+
+	diffuseLightIntensity := 0.0
+	for _, light := range lights {
+		lightDirection := (light.position.Subtract(*point)).Normalize()
+		diffuseLightIntensity += light.intensity * math.Max(0.0, lightDirection.DotProduct(*N))
+	}
 	if !intersect {
 		return bgColor
 	}
-	return mat.diffuseColor
+	return mat.diffuseColor.MultiplyScalar(diffuseLightIntensity)
 }
 
 // RayIntersect : http://www.lighthouse3d.com/tutorials/maths/ray-sphere-intersection/ (Check if a given ray intersects with a sphere)

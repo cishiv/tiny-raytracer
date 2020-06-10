@@ -27,7 +27,7 @@ const height = 768
 var ivory = NewMaterial(0.4, 0.4, 0.3)
 var redRubber = NewMaterial(0.3, 0.1, 0.1)
 
-func render(spheres []Sphere) {
+func render(spheres []Sphere, lights []Light) {
 	// Construct the framebuffer
 	framebuffer := make([]Vec3, width*height)
 	origin := NewVec3(0, 0, 0)
@@ -41,7 +41,7 @@ func render(spheres []Sphere) {
 			// TODO: We're not 3D yet
 			z := -float64(height) / (2.0 * math.Tan(fieldOfView/2.0))
 			direction := NewVec3(x, y, z).Normalize()
-			framebuffer[i+j*width] = CastRay(&origin, &direction, spheres)
+			framebuffer[i+j*width] = CastRay(&origin, &direction, spheres, lights)
 		}
 	}
 	fmt.Println("Framebuffer filled successfully")
@@ -75,7 +75,7 @@ func render(spheres []Sphere) {
 }
 
 func main() {
-	render(createSpheres())
+	render(createSpheres(), createLights())
 }
 
 func createSpheres() []Sphere {
@@ -86,4 +86,10 @@ func createSpheres() []Sphere {
 	spheres = append(spheres, NewSphere(7, 5, -18, 4, ivory))
 	fmt.Println(spheres)
 	return spheres
+}
+
+func createLights() []Light {
+	lights := make([]Light, 0)
+	lights = append(lights, NewLight(-20, 20, 20, 1.5))
+	return lights
 }
