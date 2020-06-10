@@ -24,8 +24,9 @@ const width = 1024
 const height = 768
 
 // Sample materials
-var ivory = NewMaterial(0.4, 0.4, 0.3)
-var redRubber = NewMaterial(0.3, 0.1, 0.1)
+var ivory = NewMaterial(NewVec3(0.4, 0.4, 0.3), NewVec3(0.6, 0.3, 0.1), 50)
+var redRubber = NewMaterial(NewVec3(0.3, 0.1, 0.1), NewVec3(0.9, 0.1, 0.1), 10)
+var mirror = NewMaterial(NewVec3(1.0, 1.0, 1.0), NewVec3(0.0, 10.0, 0.8), 1425)
 
 func render(spheres []Sphere, lights []Light) {
 	// Construct the framebuffer
@@ -41,7 +42,7 @@ func render(spheres []Sphere, lights []Light) {
 			// TODO: We're not 3D yet
 			z := -float64(height) / (2.0 * math.Tan(fieldOfView/2.0))
 			direction := NewVec3(x, y, z).Normalize()
-			framebuffer[i+j*width] = CastRay(&origin, &direction, spheres, lights)
+			framebuffer[i+j*width] = CastRay(&origin, &direction, spheres, lights, 0)
 		}
 	}
 	fmt.Println("Framebuffer filled successfully")
@@ -80,10 +81,10 @@ func main() {
 
 func createSpheres() []Sphere {
 	spheres := make([]Sphere, 0)
-	spheres = append(spheres, NewSphere(-3, 0, -16, 5, ivory))
-	spheres = append(spheres, NewSphere(-1.0, -1.5, -12, 2, redRubber))
+	spheres = append(spheres, NewSphere(-3, 0, -16, 2, ivory))
+	spheres = append(spheres, NewSphere(-1.0, -1.5, -12, 2, mirror))
 	spheres = append(spheres, NewSphere(1.5, -0.5, -18, 3, redRubber))
-	spheres = append(spheres, NewSphere(7, 5, -18, 4, ivory))
+	spheres = append(spheres, NewSphere(7, 5, -18, 4, mirror))
 	fmt.Println(spheres)
 	return spheres
 }
@@ -91,5 +92,7 @@ func createSpheres() []Sphere {
 func createLights() []Light {
 	lights := make([]Light, 0)
 	lights = append(lights, NewLight(-20, 20, 20, 1.5))
+	lights = append(lights, NewLight(20, -20, -20, 1.8))
+	lights = append(lights, NewLight(30, 20, 30, 1.7))
 	return lights
 }

@@ -19,7 +19,9 @@ type Sphere struct {
 
 // Material : how do our spheres look?
 type Material struct {
-	diffuseColor Vec3
+	diffuseColor     Vec3
+	albedo           Vec3
+	specularExponent float64
 }
 
 // Light : some basic lighting
@@ -37,9 +39,11 @@ func NewLight(x, y, z, intensity float64) Light {
 }
 
 // NewMaterial : Return a new vec3 representing the diffuse_colour for a material
-func NewMaterial(x, y, z float64) Material {
+func NewMaterial(diffuseColor Vec3, albedo Vec3, specularExponent float64) Material {
 	return Material{
-		NewVec3(x, y, z),
+		diffuseColor,
+		albedo,
+		specularExponent,
 	}
 }
 
@@ -66,28 +70,82 @@ func SceneIntersect(origin, direction, hit, N *Vec3, mat *Material, spheres []Sp
 			n := k.Subtract(s.center).Normalize()
 			N.Copy(n)
 			mat.diffuseColor = s.mat.diffuseColor
+			mat.albedo = s.mat.albedo
+			mat.specularExponent = s.mat.specularExponent
 		}
 	}
 	return sphereDistance < 1000.0
 }
 
 // CastRay : Cast a ray toward all spheres in a scene, with a given origin of light and a direction, return the resulting 'reflection'(?)
-func CastRay(origin, direction *Vec3, spheres []Sphere, lights []Light) Vec3 {
+func CastRay(origin, direction *Vec3, spheres []Sphere, lights []Light, depth uint) Vec3 {
 	point := &Vec3{}
 	N := &Vec3{}
 	mat := &Material{}
 
-	intersect := SceneIntersect(origin, direction, point, N, mat, spheres)
-
-	diffuseLightIntensity := 0.0
-	for _, light := range lights {
-		lightDirection := (light.position.Subtract(*point)).Normalize()
-		diffuseLightIntensity += light.intensity * math.Max(0.0, lightDirection.DotProduct(*N))
-	}
-	if !intersect {
+	if depth > 4 || !SceneIntersect(origin, direction, point, N, mat, spheres) {
 		return bgColor
 	}
-	return mat.diffuseColor.MultiplyScalar(diffuseLightIntensity)
+
+	// LIGHTING
+	// ----------
+
+	// offset
+	// if the point drawn lines on the surface of the object, any ray will intersect the object (?)
+	p := 1E-3
+
+	// Reflection
+	// We don't need to normalize here, but just for safety...
+	reflectDirection := Reflect(*direction, *N)
+	var reflectOrigin Vec3
+	if reflectDirection.DotProduct(*N) < 0 {
+		reflectOrigin = point.Subtract(N.MultiplyScalar(p))
+	} else {
+		reflectOrigin = point.Add(N.MultiplyScalar(p))
+	}
+
+	reflectColor := CastRay(&reflectOrigin, &reflectDirection, spheres, lights, depth+1)
+
+	diffuseLightIntensity := 0.0
+	specularLightIntensity := 0.0
+	lightDist := 0.0
+	var shadowOrigin Vec3
+	for _, light := range lights {
+		lightDirection := (light.position.Subtract(*point)).Normalize()
+		lightDist = light.position.Subtract(*point).Magnitude()
+
+		if lightDirection.DotProduct(*N) < 0 {
+			shadowOrigin = point.Subtract(N.MultiplyScalar(p))
+		} else {
+			shadowOrigin = point.Add(N.MultiplyScalar(p))
+		}
+
+		shadowPoint := Vec3{}
+		shadowNormal := Vec3{}
+		tempMat := Material{}
+
+		// Shadows: Skip the current light source if there is an intersection on the segment between the light source and current point
+		if SceneIntersect(&shadowOrigin, &lightDirection, &shadowPoint, &shadowNormal, &tempMat, spheres) && shadowPoint.Subtract(shadowOrigin).Magnitude() < lightDist {
+			continue
+		}
+
+		diffuseLightIntensity += light.intensity * math.Max(0.0, lightDirection.DotProduct(*N))
+
+		specularLightIntensity += math.Pow(
+			math.Max(0.0, Reflect(lightDirection, *N).DotProduct(*direction)),
+			mat.specularExponent,
+		) * light.intensity
+	}
+	lit := mat.diffuseColor.MultiplyScalar(diffuseLightIntensity).MultiplyScalar(mat.albedo.x)
+	sp := specularLightIntensity * mat.albedo.y
+	specular := NewVec3(1.0, 1.0, 1.0).MultiplyScalar(sp)
+	re := reflectColor.MultiplyScalar(mat.albedo.z)
+	return lit.Add(specular).Add(re)
+}
+
+// Reflect : Compute the illumination of a point using https://en.wikipedia.org/wiki/Phong_reflection_model
+func Reflect(I Vec3, N Vec3) Vec3 {
+	return I.Subtract(N.MultiplyScalar((I.DotProduct(N)) * 2.0))
 }
 
 // RayIntersect : http://www.lighthouse3d.com/tutorials/maths/ray-sphere-intersection/ (Check if a given ray intersects with a sphere)
