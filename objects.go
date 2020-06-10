@@ -20,8 +20,9 @@ type Sphere struct {
 // Material : how do our spheres look?
 type Material struct {
 	diffuseColor     Vec3
-	albedo           Vec3
+	albedo           Vec4
 	specularExponent float64
+	refractiveIndex  float64
 }
 
 // Light : some basic lighting
@@ -39,11 +40,12 @@ func NewLight(x, y, z, intensity float64) Light {
 }
 
 // NewMaterial : Return a new vec3 representing the diffuse_colour for a material
-func NewMaterial(diffuseColor Vec3, albedo Vec3, specularExponent float64) Material {
+func NewMaterial(diffuseColor Vec3, albedo Vec4, specularExponent, refractiveIndex float64) Material {
 	return Material{
 		diffuseColor,
 		albedo,
 		specularExponent,
+		refractiveIndex,
 	}
 }
 
@@ -74,7 +76,27 @@ func SceneIntersect(origin, direction, hit, N *Vec3, mat *Material, spheres []Sp
 			mat.specularExponent = s.mat.specularExponent
 		}
 	}
-	return sphereDistance < 1000.0
+
+	checkerboardDistance := float64(math.MaxFloat64)
+	if math.Abs(direction.y) > 1E-3 {
+		d := -(origin.y + 4) / direction.y
+		pt := origin.Add(direction.MultiplyScalar(d))
+		if d > 0.0 && math.Abs(pt.x) < 10.0 && pt.z < -10 && pt.z > -30.0 && d < sphereDistance {
+			checkerboardDistance = d
+			hit.Copy(pt)
+			N.Copy(NewVec3(0, 1, 0))
+			if (int(0.5*hit.x+1000)+int(0.5*hit.z))&1 == 1 {
+				mat.diffuseColor.Copy(NewVec3(.3, .3, .3))
+			} else {
+				mat.diffuseColor.Copy(NewVec3(.3, .2, .1))
+			}
+			mat.refractiveIndex = 1
+			mat.specularExponent = 50.0
+			mat.albedo = NewVec4(1, 0.2, 0, 0)
+		}
+	}
+	return math.Min(sphereDistance, checkerboardDistance) < 1000.0
+
 }
 
 // CastRay : Cast a ray toward all spheres in a scene, with a given origin of light and a direction, return the resulting 'reflection'(?)
@@ -88,13 +110,15 @@ func CastRay(origin, direction *Vec3, spheres []Sphere, lights []Light, depth ui
 	}
 
 	// LIGHTING
-	// ----------
 
 	// offset
 	// if the point drawn lines on the surface of the object, any ray will intersect the object (?)
+	// prevents self occlusion when factored in
 	p := 1E-3
 
 	// Reflection
+	// When intersecting the sphere, compute the reflected ray
+	// And then just cast a ray in its direction
 	// We don't need to normalize here, but just for safety...
 	reflectDirection := Reflect(*direction, *N)
 	var reflectOrigin Vec3
@@ -106,6 +130,18 @@ func CastRay(origin, direction *Vec3, spheres []Sphere, lights []Light, depth ui
 
 	reflectColor := CastRay(&reflectOrigin, &reflectDirection, spheres, lights, depth+1)
 
+	// Refraction
+	refractDirection := Refract(*direction, *N, mat.refractiveIndex, 1.0)
+	var refractOrigin Vec3
+	if refractDirection.DotProduct(*N) < 0 {
+		refractOrigin = point.Subtract(N.MultiplyScalar(p))
+	} else {
+		refractOrigin = point.Add(N.MultiplyScalar(p))
+	}
+
+	refractColor := CastRay(&refractOrigin, &refractDirection, spheres, lights, depth+1)
+
+	// Shadows + Diffuse
 	diffuseLightIntensity := 0.0
 	specularLightIntensity := 0.0
 	lightDist := 0.0
@@ -136,16 +172,39 @@ func CastRay(origin, direction *Vec3, spheres []Sphere, lights []Light, depth ui
 			mat.specularExponent,
 		) * light.intensity
 	}
+
+	// Quick math
 	lit := mat.diffuseColor.MultiplyScalar(diffuseLightIntensity).MultiplyScalar(mat.albedo.x)
 	sp := specularLightIntensity * mat.albedo.y
 	specular := NewVec3(1.0, 1.0, 1.0).MultiplyScalar(sp)
 	re := reflectColor.MultiplyScalar(mat.albedo.z)
-	return lit.Add(specular).Add(re)
+	refract := refractColor.MultiplyScalar(mat.albedo.w)
+	return lit.Add(specular).Add(re).Add(refract)
 }
 
 // Reflect : Compute the illumination of a point using https://en.wikipedia.org/wiki/Phong_reflection_model
 func Reflect(I Vec3, N Vec3) Vec3 {
 	return I.Subtract(N.MultiplyScalar((I.DotProduct(N)) * 2.0))
+}
+
+// Refract : Compute the refracted ray using Snells Law (https://en.wikipedia.org/wiki/Snell%27s_law)
+func Refract(I Vec3, N Vec3, etaT float64, etaI float64) Vec3 {
+	cosi := -math.Max(-1.0, math.Min(1.0, I.DotProduct(N)))
+
+	if cosi < 0 {
+		// If ray is inside the object, swap
+		return Refract(I, N.Negate(), etaI, etaT)
+	}
+
+	eta := etaI / etaT
+
+	k := 1 - eta*eta*(1-cosi*cosi)
+
+	if k < 0 {
+		return NewVec3(1.0, 0.0, 0.0)
+	}
+
+	return I.MultiplyScalar(eta).Add(N.MultiplyScalar((eta*cosi - math.Sqrt(k))))
 }
 
 // RayIntersect : http://www.lighthouse3d.com/tutorials/maths/ray-sphere-intersection/ (Check if a given ray intersects with a sphere)

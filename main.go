@@ -24,9 +24,10 @@ const width = 1024
 const height = 768
 
 // Sample materials
-var ivory = NewMaterial(NewVec3(0.4, 0.4, 0.3), NewVec3(0.6, 0.3, 0.1), 50)
-var redRubber = NewMaterial(NewVec3(0.3, 0.1, 0.1), NewVec3(0.9, 0.1, 0.1), 10)
-var mirror = NewMaterial(NewVec3(1.0, 1.0, 1.0), NewVec3(0.0, 10.0, 0.8), 1425)
+var ivory = NewMaterial(NewVec3(0.4, 0.4, 0.3), NewVec4(0.6, 0.3, 0.1, 0.0), 50, 1.0)
+var redRubber = NewMaterial(NewVec3(0.3, 0.1, 0.1), NewVec4(0.9, 0.1, 0.1, 0.0), 10, 1.0)
+var mirror = NewMaterial(NewVec3(1.0, 1.0, 1.0), NewVec4(0.0, 10.0, 0.8, 0.0), 1425, 1.0)
+var glass = NewMaterial(NewVec3(0.6, 0.7, 0.8), NewVec4(0.0, 0.5, 0.1, 0.8), 125, 1.5)
 
 func render(spheres []Sphere, lights []Light) {
 	// Construct the framebuffer
@@ -82,7 +83,7 @@ func main() {
 func createSpheres() []Sphere {
 	spheres := make([]Sphere, 0)
 	spheres = append(spheres, NewSphere(-3, 0, -16, 2, ivory))
-	spheres = append(spheres, NewSphere(-1.0, -1.5, -12, 2, mirror))
+	spheres = append(spheres, NewSphere(-1.0, -1.5, -12, 2, glass))
 	spheres = append(spheres, NewSphere(1.5, -0.5, -18, 3, redRubber))
 	spheres = append(spheres, NewSphere(7, 5, -18, 4, mirror))
 	fmt.Println(spheres)
@@ -91,7 +92,7 @@ func createSpheres() []Sphere {
 
 func createLights() []Light {
 	lights := make([]Light, 0)
-	lights = append(lights, NewLight(-20, 20, 20, 1.5))
+	lights = append(lights, NewLight(-20, 20, 20, 4.5))
 	lights = append(lights, NewLight(20, -20, -20, 1.8))
 	lights = append(lights, NewLight(30, 20, 30, 1.7))
 	return lights
